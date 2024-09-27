@@ -2,14 +2,29 @@
 set -e
 
 DEFAULT_USER=${1:-${DEFAULT_USER:-"rstudio"}}
+DEFAULT_USER_ID=${2:-${DEFAULT_USER_ID:-"1000"}}
+DEFAULT_GROUP_ID=${3:-${DEFAULT_GROUP_ID:-"1000"}}
+DEFAULT_GROUP_NAME=${4:-${DEFAULT_GROUP_NAME:-"rstudio"}}
 
 if id -u "${DEFAULT_USER}" >/dev/null 2>&1; then
     echo "User ${DEFAULT_USER} already exists"
 else
     ## Need to configure non-root user for RStudio
-    useradd -s /bin/bash -m "$DEFAULT_USER"
+    useradd -s /bin/bash -m "$DEFAULT_USER" 
     echo "${DEFAULT_USER}:${DEFAULT_USER}" | chpasswd
-    usermod -a -G staff "${DEFAULT_USER}"
+    usermod -a -G staff "$DEFAULT_USER"
+    # Change UID
+    usermod -u "${DEFAULT_USER_ID}" "${DEFAULT_USER}"
+
+    # Create group if doesn't exist
+    if ! getent group "${DEFAULT_GROUP_ID}" > /dev/null; then
+        echo "Creating group ${DEFAULT_GROUP_NAME}"
+        groupadd -g "${DEFAULT_GROUP_ID}" "${DEFAULT_GROUP_NAME}"
+    fi
+    # Change GID
+    usermod -g "${DEFAULT_GROUP_ID}" "${DEFAULT_USER}"
+    
+    id "${DEFAULT_USER}"
 
     ## Rocker's default RStudio settings, for better reproducibility
     mkdir -p "/home/${DEFAULT_USER}/.config/rstudio/"

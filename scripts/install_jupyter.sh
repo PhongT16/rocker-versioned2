@@ -5,6 +5,9 @@ set -e
 NCPUS=${NCPUS:-"-1"}
 
 NB_USER=${NB_USER:-${DEFAULT_USER:-"rstudio"}}
+NB_UID=${NB_UID:-${DEFAULT_USERID:-"1000"}}
+NB_GID=${NB_GID:-${DEFAULT_USERGID:-"1000"}}
+NB_GROUP=${NB_GROUP:-${DEFAULT_GROUP:-"rstudio"}}
 
 # a function to install apt packages only if they are not installed
 function apt_install() {
@@ -22,8 +25,12 @@ apt_install \
     libzmq3-dev
 
 # set up the default user if it does not exist
+# This script snippet checks if a user with the name stored in the environment variable ${NB_USER} exists. 
+# If the user does not exist (as checked by id -u), it calls a script /rocker_scripts/default_user.sh with ${NB_USER} as an argument to create or set up the user.
+
+
 if ! id -u "${NB_USER}" >/dev/null 2>&1; then
-    /rocker_scripts/default_user.sh "${NB_USER}"
+    /rocker_scripts/default_user.sh "${NB_USER}" "${NB_UID}" "${NB_GID}" "${NB_GROUP}" 
 fi
 
 # install python & setup venv
