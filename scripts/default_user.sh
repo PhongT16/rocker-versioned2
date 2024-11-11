@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -x
 
 DEFAULT_USER=${1:-${DEFAULT_USER:-"rstudio"}}
 DEFAULT_USER_ID=${2:-${DEFAULT_USER_ID:-"1000"}}
@@ -10,19 +11,30 @@ if id -u "${DEFAULT_USER}" >/dev/null 2>&1; then
     echo "User ${DEFAULT_USER} already exists"
 else
     ## Need to configure non-root user for RStudio
-    useradd -s /bin/bash -m "$DEFAULT_USER" 
-    echo "${DEFAULT_USER}:${DEFAULT_USER}" | chpasswd
-    usermod -a -G staff "$DEFAULT_USER"
-    # Change UID
-    usermod -u "${DEFAULT_USER_ID}" "${DEFAULT_USER}"
 
     # Create group if doesn't exist
     if ! getent group "${DEFAULT_GROUP_ID}" > /dev/null; then
         echo "Creating group ${DEFAULT_GROUP_NAME}"
         groupadd -g "${DEFAULT_GROUP_ID}" "${DEFAULT_GROUP_NAME}"
     fi
+
+    # Create home directory for user
+    #useradd -s /bin/bash -m "$DEFAULT_USER" 
+
+    # Don't create home directory for user
+    echo "Attempting to create ${DEFAULT_USER}"
+    useradd -u "${DEFAULT_USER_ID}" -g "${DEFAULT_GROUP_ID}" -s /bin/bash -M "$DEFAULT_USER" 
+    if [ $? -eq 0 ]; then 
+      echo "Successfully created ${DEFAULT_USER} with UID: ${DEFAULT_USER_ID} and GID: ${DEFAULT_GROUP_ID}"
+    fi
+
+    echo "${DEFAULT_USER}:${DEFAULT_USER}" | chpasswd
+    usermod -a -G staff "$DEFAULT_USER"
+    # Change UID
+    #usermod -u "${DEFAULT_USER_ID}" "${DEFAULT_USER}"
+
     # Change GID
-    usermod -g "${DEFAULT_GROUP_ID}" "${DEFAULT_USER}"
+    #usermod -g "${DEFAULT_GROUP_ID}" "${DEFAULT_USER}"
     
     id "${DEFAULT_USER}"
 
@@ -36,7 +48,7 @@ else
     "posix_terminal_shell": "bash"
 }
 EOF
-    chown -R "${DEFAULT_USER}:${DEFAULT_USER}" "/home/${DEFAULT_USER}"
+    #chown -R "${DEFAULT_USER}:${DEFAULT_USER}" "/home/${DEFAULT_USER}"
 fi
 
 # If shiny server installed, make the user part of the shiny group
